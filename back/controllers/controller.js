@@ -1,5 +1,5 @@
 const tracks = require('../models/tracks');
-const employeeCtrl = {};
+const searchCtrl = {};
 var SpotifyWebApi = require('spotify-web-api-node');
 
 // The API object we'll use to interact with the API
@@ -13,9 +13,9 @@ var spotifyApi = new SpotifyWebApi({
 });
 
 
-employeeCtrl.saveSearch = async(req, res) => {
-
-    console.log('entro');
+searchCtrl.saveSearch = async(req, res) => {
+    const { termino } = req.params;
+    console.log(`entro y llego ${termino}`);
     await spotifyApi.clientCredentialsGrant()
         .then(function(data) {
 
@@ -26,20 +26,23 @@ employeeCtrl.saveSearch = async(req, res) => {
             console.log('Something went wrong when retrieving an access token', err.message);
         });
 
-    //traer los albums de spotify traigo 20
-    await spotifyApi.searchTracks('track:queen', { limit: 2 })
+    //traer los albums de spotify
+    await spotifyApi.searchTracks(`track:${termino}`, { limit: 20 })
         .then(function(data) {
 
             // Send the first (only) track object
-
-            tracks.collection.insert(data.body.tracks.items, (err, docs) => {
-                if (err) {
-                    console.log('ocurrio un error guardando en la bd');
-                } else {
-                    console.log(`se guardaron ${data.body.tracks.items.length} elementos en la BD`);
-                    res.send(data.body.tracks.items);
-                }
-            })
+            if (data.body.tracks.items.length > 0) {
+                tracks.collection.insert(data.body.tracks.items, (err, docs) => {
+                    if (err) {
+                        console.log('ocurrio un error guardando en la bd');
+                    } else {
+                        console.log(`se guardaron ${data.body.tracks.items.length} elementos en la BD`);
+                        res.json({ data: data.body.tracks.items, noresult: false });
+                    }
+                })
+            } else {
+                res.json({ noresult: true });
+            }
 
         }, function(err) {
             console.error(err);
@@ -56,4 +59,4 @@ employeeCtrl.saveSearch = async(req, res) => {
     // });
 };
 
-module.exports = employeeCtrl;
+module.exports = searchCtrl;
